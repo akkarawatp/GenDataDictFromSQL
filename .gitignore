@@ -1,0 +1,16 @@
+/.vs
+/GenDataDictFromSQL/bin/Debug/GenDataDictFromSQL.exe
+/GenDataDictFromSQL/bin/Debug/GenDataDictFromSQL.exe.config
+/GenDataDictFromSQL/bin/Debug/GenDataDictFromSQL.pdb
+/GenDataDictFromSQL/bin/Debug/GenDataDictFromSQL.vshost.exe
+/GenDataDictFromSQL/bin/Debug/GenDataDictFromSQL.vshost.exe.config
+/GenDataDictFromSQL/bin/Debug/GenDataDictFromSQL.vshost.exe.manifest
+/GenDataDictFromSQL/bin/Debug/GenDataDictFromSQL.xml
+/GenDataDictFromSQL/bin/Debug/LinqDB.dll
+/GenDataDictFromSQL/bin/Debug/LinqDB.pdb
+/GenDataDictFromSQL/bin/Debug/LinqDB.xml
+/GenDataDictFromSQL/bin/Debug/Setting.ini
+/GenDataDictFromSQL/obj
+/LinqDB/LinqDB.vbproj.user
+/LinqDB/bin
+/LinqDB/obj

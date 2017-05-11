@@ -78,6 +78,10 @@ Public Class Form1
             MsgBox("กรุณาระบุ Output Path", MsgBoxStyle.OkOnly + 48, "Validate Data")
             ret = False
             txtOutputPath.Focus()
+        ElseIf SqlDB.ChkConnection(GetConnectionString()) = False Then
+            MsgBox("Database Connection Fail!", MsgBoxStyle.OkOnly + 48, "Validate Data")
+            ret = False
+            txtDataSource.Focus()
         End If
 
         Return ret

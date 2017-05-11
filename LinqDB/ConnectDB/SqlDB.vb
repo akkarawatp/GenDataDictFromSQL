@@ -157,11 +157,11 @@ Namespace ConnectDB
         End Function
 
 
-        Public Shared Function ChkConnection() As Boolean
+        Public Shared Function ChkConnection(ByVal connString As String) As Boolean
             Dim ret As Boolean = False
             Dim conn As SqlConnection
             Try
-                conn = New SqlConnection(GetConnectionString())
+                conn = New SqlConnection(connString)
                 conn.Open()
 
                 ret = True
@@ -172,7 +172,7 @@ Namespace ConnectDB
                 ret = False
             Catch ex As SqlException
                 Try
-                    conn = New SqlConnection(GetConnectionString())
+                    conn = New SqlConnection(connString)
                     conn.Open()
                     ret = True
                     conn.Close()

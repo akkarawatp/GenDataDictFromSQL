@@ -2,6 +2,8 @@
 Imports System.Data.SqlClient
 Imports LinqDB.ConnectDB
 Imports OfficeOpenXml
+Imports wDoc = SautinSoft.Document
+Imports SautinSoft.Document.Tables
 
 Public Class Form1
 
@@ -100,79 +102,242 @@ Public Class Form1
                 ProgressBar1.Value = 1
                 Application.DoEvents()
 
-                Using ep As New ExcelPackage
-                    Dim i As Integer = 1
-                    Dim ws As ExcelWorksheet = ep.Workbook.Worksheets.Add("Output")
-                    Dim HeaderRow As Integer = 3   'ถ้า Table แรก ให้เริ่มที่ Row ที่ 3
-
-                    For Each tDr As DataRow In tDt.Rows
-                        Dim TableName As String = tDr("table_name")
-                        lblProgressText.Text = "Generate Table " & TableName.ToUpper & " ( " & i & "/" & tDt.Rows.Count & " )"
-                        Application.DoEvents()
-
-                        'หา Column ของ Table ที่ระบุ
-                        Dim cDt As DataTable = GetTableColumn(TableName)
-                        If cDt.Rows.Count > 0 Then
-                            Dim dt As New DataTable
-                            dt.Columns.Add("Column Name")
-                            dt.Columns.Add("Data Type")
-                            dt.Columns.Add("Comment")
-                            dt.Columns.Add("PK")
-                            dt.Columns.Add("UQ")
-                            dt.Columns.Add("Not Null")
-                            dt.Columns.Add("Default")
-
-                            For Each cDr As DataRow In cDt.Rows
-                                Dim dr As DataRow = dt.NewRow
-                                dr("Column Name") = cDr("COLUMN_NAME")
-                                dr("Data Type") = GetFormatColumnTypeName(cDr("TYPE_NAME"), cDr("LENGTH"))
-                                dr("Comment") = GetColumnComment(TableName, cDr("COLUMN_NAME"))
-                                dr("PK") = GetPKColumn(TableName, cDr("COLUMN_NAME"))
-                                dr("UQ") = GetUQColumn(TableName, cDr("COLUMN_NAME"))
-                                dr("Not Null") = IIf(cDr("NULLABLE") = 1, "", "Y")
-                                If Convert.IsDBNull(cDr("COLUMN_DEF")) = False Then dr("Default") = ReplaceBracket(cDr("COLUMN_DEF"))
-
-                                dt.Rows.Add(dr)
-                            Next
-
-                            If dt.Rows.Count > 0 Then
-                                ExportDatatableToExcel(ep, ws, HeaderRow, i & ". " & TableName, dt, GetTableComment(TableName))
-                                HeaderRow += (dt.Rows.Count + 5)
-                            End If
-                            dt.Dispose()
-                        End If
-                        cDt.Dispose()
-                        i += 1
-                        ProgressBar1.Value += 1
-                    Next
-
-                    lblProgressText.Text = "Save output file..."
-                    ProgressBar1.Value += 1
-                    Application.DoEvents()
-
-                    If File.Exists(txtOutputPath.Text) = True Then
-                        File.SetAttributes(txtOutputPath.Text, FileAttributes.Normal)
-                        File.Delete(txtOutputPath.Text)
-                    End If
-
-                    Dim f As New IO.FileInfo(txtOutputPath.Text)
-                    ep.SaveAs(f)
-                    Threading.Thread.Sleep(5000)
-
-                    If IO.File.Exists(f.FullName) = True Then
-                        CreateSetting()
-
-                        lblProgressText.Text = "Generate Complete"
-                        ProgressBar1.Value += 1
-                        Application.DoEvents()
-                        MessageBox.Show("Complete")
-                    End If
-                    f = Nothing
-                End Using
+                GenerateFileExcel(tDt)
+                'GenerateFileWord(tDt)
             End If
             tDt.Dispose()
         End If
     End Sub
+
+
+
+    Private Sub GenerateFileWord(tDt As DataTable)
+        Dim docx As New wDoc.DocumentCore
+        Dim s As New wDoc.Section(docx)
+        docx.Sections.Add(s)
+
+
+        For i As Integer = 0 To tDt.Rows.Count - 1
+            Dim dr As DataRow = tDt.Rows(i)
+            'Display Table Name
+            Dim TableName As String = dr("table_name")
+            Dim TableComment As String = GetTableComment(TableName)
+
+            lblProgressText.Text = "Generate Table " & TableName.ToUpper & " ( " & i & "/" & tDt.Rows.Count & " )"
+            Application.DoEvents()
+
+            Dim pTableName As New wDoc.Paragraph(docx)
+            pTableName.ParagraphFormat.Alignment = HorizontalAlignment.Left
+            pTableName.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+            pTableName.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+            pTableName.Content.Start.Insert((i + 1) & ". " & TableName, New wDoc.CharacterFormat() With {
+                                        .FontName = "Tahoma",
+                                        .Size = 8.0
+                                   })
+            s.Blocks.Add(pTableName)
+
+            Dim pTableComment As New wDoc.Paragraph(docx)
+            pTableComment.ParagraphFormat.Alignment = HorizontalAlignment.Left
+            pTableComment.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+            pTableComment.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+            pTableComment.Content.End.Insert(TableComment, New wDoc.CharacterFormat() With {
+                                        .FontName = "Tahoma",
+                                        .Size = 8.0
+                                   })
+            s.Blocks.Add(pTableComment)
+
+
+            'Table Data
+            Dim t As New Table(docx)
+            Dim tWidth As Double = wDoc.LengthUnitConverter.Convert(160, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+            t.TableFormat.PreferredWidth = New TableWidth(tWidth, TableWidthUnit.Point)
+            t.TableFormat.Alignment = HorizontalAlignment.Left
+#Region "Header Row"
+            Dim hRow As New TableRow(docx)
+            'hRow.RowFormat.Height = New TableRowHeight(wDoc.LengthUnitConverter.Convert(7, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point), TableRowHeightRule.Auto)
+
+            Dim hColNameCell As New TableCell(docx)
+            '// Set some cell formatting
+            hColNameCell.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+            'hColNameCell.CellFormat.PreferredWidth = New TableWidth(wDoc.LengthUnitConverter.Convert(30, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point), TableWidthUnit.Point)
+            SetTextToTableCell("Column Name", docx, hColNameCell, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
+            hRow.Cells.Add(hColNameCell)
+
+            Dim hDataType As New TableCell(docx)
+            hDataType.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+            hRow.Cells.Add(hDataType)
+            SetTextToTableCell("Data Type", docx, hDataType, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
+
+            Dim hComment As New TableCell(docx)
+            hComment.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+            hRow.Cells.Add(hComment)
+            SetTextToTableCell("Comment", docx, hComment, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
+
+            Dim hPK As New TableCell(docx)
+            hPK.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+            hRow.Cells.Add(hPK)
+            SetTextToTableCell("PK", docx, hPK, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
+
+            Dim hUQ As New TableCell(docx)
+            hUQ.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+            hRow.Cells.Add(hUQ)
+            SetTextToTableCell("UQ", docx, hUQ, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
+
+            Dim hNotNull As New TableCell(docx)
+            hNotNull.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+            hRow.Cells.Add(hNotNull)
+            SetTextToTableCell("Not Null", docx, hNotNull, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
+
+            Dim hDefault As New TableCell(docx)
+            hDefault.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+            hRow.Cells.Add(hDefault)
+            SetTextToTableCell("Default", docx, hDefault, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
+
+            t.Rows.Add(hRow)
+#End Region
+
+#Region "Data Row"
+            'หา Column ของ Table ที่ระบุ
+            Dim cDt As DataTable = GetTableColumn(TableName)
+            If cDt.Rows.Count > 0 Then
+                For Each cDr As DataRow In cDt.Rows
+                    Dim dRow As New TableRow(docx)
+                    SetContentDataRow(cDr("COLUMN_NAME"), docx, dRow, 45)
+                    SetContentDataRow(GetFormatColumnTypeName(cDr("TYPE_NAME"), cDr("LENGTH")), docx, dRow, 16)
+                    SetContentDataRow(GetColumnComment(TableName, cDr("COLUMN_NAME")), docx, dRow, 38)
+                    SetContentDataRow(GetPKColumn(TableName, cDr("COLUMN_NAME")), docx, dRow, 6)
+                    SetContentDataRow(GetUQColumn(TableName, cDr("COLUMN_NAME")), docx, dRow, 6)
+                    SetContentDataRow(IIf(cDr("NULLABLE") = 1, "", "Y"), docx, dRow, 6)
+
+                    Dim DefalueValue As String = ""
+                    If Convert.IsDBNull(cDr("COLUMN_DEF")) = False Then
+                        DefalueValue = ReplaceBracket(cDr("COLUMN_DEF"))
+                        SetContentDataRow(DefalueValue, docx, dRow, 25)
+                    Else
+                        SetContentDataRow(" ", docx, dRow, 25)
+                    End If
+                    t.Rows.Add(dRow)
+                Next
+            End If
+            cDt.Dispose()
+#End Region
+
+            s.Blocks.Add(t)
+            s.Content.End.Insert(" ")
+            ProgressBar1.Value += 1
+            Application.DoEvents()
+        Next
+
+        lblProgressText.Text = "Save output file..."
+        ProgressBar1.Value += 1
+        Application.DoEvents()
+        docx.Save(txtOutputPath.Text)
+
+        lblProgressText.Text = "Complete"
+        ProgressBar1.Value = ProgressBar1.Maximum
+        Application.DoEvents()
+    End Sub
+
+    Private Sub SetContentDataRow(txt As String, docx As wDoc.DocumentCore, dRow As TableRow, CellWidth As Integer)
+        Dim dCell As New TableCell(docx)
+        dCell.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
+        Dim cWidth As Double = wDoc.LengthUnitConverter.Convert(CellWidth, wDoc.LengthUnit.Centimeter, wDoc.LengthUnit.Point)
+        dCell.CellFormat.PreferredWidth = New TableWidth(cWidth, TableWidthUnit.Point)
+        dRow.Cells.Add(dCell)
+
+        'Dim p As New wDoc.Paragraph(docx)
+        'p.ParagraphFormat.Alignment = HorizontalAlignment.Left
+        'p.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(1, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+        'p.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(1, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+        'p.ParagraphFormat.LineSpacing = 1
+        dCell.Content.Start.Insert(txt, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0})
+
+        'p.Content.End.Insert(txt, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0})
+    End Sub
+
+    Private Sub SetTextToTableCell(txt As String, docx As wDoc.DocumentCore, cell As TableCell, txtStyle As wDoc.CharacterFormat)
+        Dim p As New wDoc.Paragraph(docx)
+        p.ParagraphFormat.Alignment = HorizontalAlignment.Left
+        p.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+        p.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
+        p.Content.Start.Insert(txt, txtStyle)
+        cell.Blocks.Add(p)
+    End Sub
+
+
+
+    Private Sub GenerateFileExcel(tDt As DataTable)
+        Using ep As New ExcelPackage
+            Dim i As Integer = 1
+            Dim ws As ExcelWorksheet = ep.Workbook.Worksheets.Add("Output")
+            Dim HeaderRow As Integer = 3   'ถ้า Table แรก ให้เริ่มที่ Row ที่ 3
+
+            For Each tDr As DataRow In tDt.Rows
+                Dim TableName As String = tDr("table_name")
+                lblProgressText.Text = "Generate Table " & TableName.ToUpper & " ( " & i & "/" & tDt.Rows.Count & " )"
+                Application.DoEvents()
+
+                'หา Column ของ Table ที่ระบุ
+                Dim cDt As DataTable = GetTableColumn(TableName)
+                If cDt.Rows.Count > 0 Then
+                    Dim dt As New DataTable
+                    dt.Columns.Add("Column Name")
+                    dt.Columns.Add("Data Type")
+                    dt.Columns.Add("Comment")
+                    dt.Columns.Add("PK")
+                    dt.Columns.Add("UQ")
+                    dt.Columns.Add("Not Null")
+                    dt.Columns.Add("Default")
+
+                    For Each cDr As DataRow In cDt.Rows
+                        Dim dr As DataRow = dt.NewRow
+                        dr("Column Name") = cDr("COLUMN_NAME")
+                        dr("Data Type") = GetFormatColumnTypeName(cDr("TYPE_NAME"), cDr("LENGTH"))
+                        dr("Comment") = GetColumnComment(TableName, cDr("COLUMN_NAME"))
+                        dr("PK") = GetPKColumn(TableName, cDr("COLUMN_NAME"))
+                        dr("UQ") = GetUQColumn(TableName, cDr("COLUMN_NAME"))
+                        dr("Not Null") = IIf(cDr("NULLABLE") = 1, "", "Y")
+                        If Convert.IsDBNull(cDr("COLUMN_DEF")) = False Then dr("Default") = ReplaceBracket(cDr("COLUMN_DEF"))
+
+                        dt.Rows.Add(dr)
+                    Next
+
+                    If dt.Rows.Count > 0 Then
+                        ExportDatatableToExcel(ep, ws, HeaderRow, i & ". " & TableName, dt, GetTableComment(TableName))
+                        HeaderRow += (dt.Rows.Count + 5)
+                    End If
+                    dt.Dispose()
+                End If
+                cDt.Dispose()
+                i += 1
+                ProgressBar1.Value += 1
+            Next
+
+            lblProgressText.Text = "Save output file..."
+            ProgressBar1.Value += 1
+            Application.DoEvents()
+
+            If File.Exists(txtOutputPath.Text) = True Then
+                File.SetAttributes(txtOutputPath.Text, FileAttributes.Normal)
+                File.Delete(txtOutputPath.Text)
+            End If
+
+            Dim f As New IO.FileInfo(txtOutputPath.Text)
+            ep.SaveAs(f)
+            Threading.Thread.Sleep(5000)
+
+            If IO.File.Exists(f.FullName) = True Then
+                CreateSetting()
+
+                lblProgressText.Text = "Generate Complete"
+                ProgressBar1.Value += 1
+                Application.DoEvents()
+                MessageBox.Show("Complete")
+            End If
+            f = Nothing
+        End Using
+    End Sub
+
 
     Private Sub ExportDatatableToExcel(ep As ExcelPackage, ws As ExcelWorksheet, HeaderRow As Integer, TableName As String, DT As DataTable, TableComment As String)
         ws.Cells("A" & (HeaderRow - 2)).Value = TableName.ToUpper

@@ -2,8 +2,7 @@
 Imports System.Data.SqlClient
 Imports LinqDB.ConnectDB
 Imports OfficeOpenXml
-Imports wDoc = SautinSoft.Document
-Imports SautinSoft.Document.Tables
+Imports Xceed.Words.NET
 
 Public Class Form1
 
@@ -44,7 +43,11 @@ Public Class Form1
 
     Private Sub btnBrowseFile_Click(sender As Object, e As EventArgs) Handles btnBrowseFile.Click
         Dim fle As New SaveFileDialog
-        fle.Filter = "Excel File|*.xlsx"
+        If rdiDocDOCX.Checked = True Then
+            fle.Filter = "Word File|*.docx"
+        Else
+            fle.Filter = "Excel File|*.xlsx"
+        End If
         If txtOutputPath.Text.Trim <> "" Then
             fle.InitialDirectory = New DirectoryInfo(txtOutputPath.Text).FullName
         End If
@@ -102,20 +105,32 @@ Public Class Form1
                 ProgressBar1.Value = 1
                 Application.DoEvents()
 
-                GenerateFileExcel(tDt)
-                'GenerateFileWord(tDt)
+                If rdiDocDOCX.Checked = True Then
+                    GenerateFileWord(tDt)
+                Else
+                    GenerateFileExcel(tDt)
+                End If
             End If
             tDt.Dispose()
         End If
     End Sub
 
 
-
     Private Sub GenerateFileWord(tDt As DataTable)
-        Dim docx As New wDoc.DocumentCore
-        Dim s As New wDoc.Section(docx)
-        docx.Sections.Add(s)
+        Dim doc As DocX = DocX.Create(txtOutputPath.Text)
+        Dim pTableName As New Formatting
+        pTableName.FontFamily = New Font("Tahoma")
+        pTableName.Size = 8.0
+        'pTableName.Position=0
 
+        Dim fHeader As New Formatting
+        fHeader.FontFamily = New Font("Tahoma")
+        fHeader.Size = 8.0
+        fHeader.Bold = True
+
+        Dim fDetail As New Formatting
+        fDetail.FontFamily = New Font("Tahoma")
+        fDetail.Size = 8.0
 
         For i As Integer = 0 To tDt.Rows.Count - 1
             Dim dr As DataRow = tDt.Rows(i)
@@ -126,104 +141,51 @@ Public Class Form1
             lblProgressText.Text = "Generate Table " & TableName.ToUpper & " ( " & i & "/" & tDt.Rows.Count & " )"
             Application.DoEvents()
 
-            Dim pTableName As New wDoc.Paragraph(docx)
-            pTableName.ParagraphFormat.Alignment = HorizontalAlignment.Left
-            pTableName.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-            pTableName.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-            pTableName.Content.Start.Insert((i + 1) & ". " & TableName, New wDoc.CharacterFormat() With {
-                                        .FontName = "Tahoma",
-                                        .Size = 8.0
-                                   })
-            s.Blocks.Add(pTableName)
-
-            Dim pTableComment As New wDoc.Paragraph(docx)
-            pTableComment.ParagraphFormat.Alignment = HorizontalAlignment.Left
-            pTableComment.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-            pTableComment.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-            pTableComment.Content.End.Insert(TableComment, New wDoc.CharacterFormat() With {
-                                        .FontName = "Tahoma",
-                                        .Size = 8.0
-                                   })
-            s.Blocks.Add(pTableComment)
-
-
-            'Table Data
-            Dim t As New Table(docx)
-            Dim tWidth As Double = wDoc.LengthUnitConverter.Convert(160, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-            t.TableFormat.PreferredWidth = New TableWidth(tWidth, TableWidthUnit.Point)
-            t.TableFormat.Alignment = HorizontalAlignment.Left
-#Region "Header Row"
-            Dim hRow As New TableRow(docx)
-            'hRow.RowFormat.Height = New TableRowHeight(wDoc.LengthUnitConverter.Convert(7, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point), TableRowHeightRule.Auto)
-
-            Dim hColNameCell As New TableCell(docx)
-            '// Set some cell formatting
-            hColNameCell.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-            'hColNameCell.CellFormat.PreferredWidth = New TableWidth(wDoc.LengthUnitConverter.Convert(30, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point), TableWidthUnit.Point)
-            SetTextToTableCell("Column Name", docx, hColNameCell, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
-            hRow.Cells.Add(hColNameCell)
-
-            Dim hDataType As New TableCell(docx)
-            hDataType.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-            hRow.Cells.Add(hDataType)
-            SetTextToTableCell("Data Type", docx, hDataType, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
-
-            Dim hComment As New TableCell(docx)
-            hComment.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-            hRow.Cells.Add(hComment)
-            SetTextToTableCell("Comment", docx, hComment, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
-
-            Dim hPK As New TableCell(docx)
-            hPK.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-            hRow.Cells.Add(hPK)
-            SetTextToTableCell("PK", docx, hPK, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
-
-            Dim hUQ As New TableCell(docx)
-            hUQ.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-            hRow.Cells.Add(hUQ)
-            SetTextToTableCell("UQ", docx, hUQ, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
-
-            Dim hNotNull As New TableCell(docx)
-            hNotNull.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-            hRow.Cells.Add(hNotNull)
-            SetTextToTableCell("Not Null", docx, hNotNull, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
-
-            Dim hDefault As New TableCell(docx)
-            hDefault.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-            hRow.Cells.Add(hDefault)
-            SetTextToTableCell("Default", docx, hDefault, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0, .Bold = True})
-
-            t.Rows.Add(hRow)
-#End Region
+            doc.InsertParagraph((i + 1) & ". " & TableName, False, pTableName)
+            doc.InsertParagraph(TableComment, False, pTableName)
 
 #Region "Data Row"
             'หา Column ของ Table ที่ระบุ
             Dim cDt As DataTable = GetTableColumn(TableName)
             If cDt.Rows.Count > 0 Then
-                For Each cDr As DataRow In cDt.Rows
-                    Dim dRow As New TableRow(docx)
-                    SetContentDataRow(cDr("COLUMN_NAME"), docx, dRow, 45)
-                    SetContentDataRow(GetFormatColumnTypeName(cDr("TYPE_NAME"), cDr("LENGTH")), docx, dRow, 16)
-                    SetContentDataRow(GetColumnComment(TableName, cDr("COLUMN_NAME")), docx, dRow, 38)
-                    SetContentDataRow(GetPKColumn(TableName, cDr("COLUMN_NAME")), docx, dRow, 6)
-                    SetContentDataRow(GetUQColumn(TableName, cDr("COLUMN_NAME")), docx, dRow, 6)
-                    SetContentDataRow(IIf(cDr("NULLABLE") = 1, "", "Y"), docx, dRow, 6)
+                'Table Data
+                Dim t As Table = doc.AddTable(cDt.Rows.Count + 1, 7)
+                t.Design = TableDesign.TableGrid
+                'HeaderRow
+                t.Rows(0).Cells(0).Paragraphs.First.Append("Column Name", fHeader)
+                t.Rows(0).Cells(1).Paragraphs.First.Append("Data Type", fHeader)
+                t.Rows(0).Cells(2).Paragraphs.First.Append("Comment", fHeader)
+                t.Rows(0).Cells(3).Paragraphs.First.Append("PK", fHeader)
+                t.Rows(0).Cells(4).Paragraphs.First.Append("UQ", fHeader)
+                t.Rows(0).Cells(5).Paragraphs.First.Append("Not Null", fHeader)
+                t.Rows(0).Cells(6).Paragraphs.First.Append("Default", fHeader)
 
-                    Dim DefalueValue As String = ""
+                t.Rows(0).Cells(0).FillColor = Color.Gray
+                t.Rows(0).Cells(1).FillColor = Color.Gray
+                t.Rows(0).Cells(2).FillColor = Color.Gray
+                t.Rows(0).Cells(3).FillColor = Color.Gray
+                t.Rows(0).Cells(4).FillColor = Color.Gray
+                t.Rows(0).Cells(5).FillColor = Color.Gray
+                t.Rows(0).Cells(6).FillColor = Color.Gray
+
+                For c As Integer = 0 To cDt.Rows.Count - 1
+                    Dim cDr As DataRow = cDt.Rows(c)
+                    t.Rows(c + 1).Cells(0).Paragraphs.First.Append(cDr("COLUMN_NAME"), fDetail)
+                    t.Rows(c + 1).Cells(1).Paragraphs.First.Append(GetFormatColumnTypeName(cDr("TYPE_NAME"), cDr("LENGTH")), fDetail)
+                    t.Rows(c + 1).Cells(2).Paragraphs.First.Append(GetColumnComment(TableName, cDr("COLUMN_NAME")), fDetail)
+                    t.Rows(c + 1).Cells(3).Paragraphs.First.Append(GetPKColumn(TableName, cDr("COLUMN_NAME")), fDetail)
+                    t.Rows(c + 1).Cells(4).Paragraphs.First.Append(GetUQColumn(TableName, cDr("COLUMN_NAME")), fDetail)
+                    t.Rows(c + 1).Cells(5).Paragraphs.First.Append(IIf(cDr("NULLABLE") = 1, "", "Y"), fDetail)
                     If Convert.IsDBNull(cDr("COLUMN_DEF")) = False Then
-                        DefalueValue = ReplaceBracket(cDr("COLUMN_DEF"))
-                        SetContentDataRow(DefalueValue, docx, dRow, 25)
-                    Else
-                        SetContentDataRow(" ", docx, dRow, 25)
+                        t.Rows(c + 1).Cells(6).Paragraphs.First.Append(ReplaceBracket(cDr("COLUMN_DEF")), fDetail)
                     End If
-                    t.Rows.Add(dRow)
                 Next
+
+                doc.InsertTable(t)
             End If
             cDt.Dispose()
 #End Region
-
-            s.Blocks.Add(t)
-            s.Content.End.Insert(" ")
+            doc.InsertParagraph(" ", False, pTableName)
             ProgressBar1.Value += 1
             Application.DoEvents()
         Next
@@ -231,40 +193,18 @@ Public Class Form1
         lblProgressText.Text = "Save output file..."
         ProgressBar1.Value += 1
         Application.DoEvents()
-        docx.Save(txtOutputPath.Text)
+        doc.Save()
+        Threading.Thread.Sleep(5000)
 
-        lblProgressText.Text = "Complete"
-        ProgressBar1.Value = ProgressBar1.Maximum
-        Application.DoEvents()
+        If IO.File.Exists(txtOutputPath.Text) = True Then
+            CreateSetting()
+
+            lblProgressText.Text = "Generate Complete"
+            ProgressBar1.Value += 1
+            Application.DoEvents()
+            MessageBox.Show("Complete")
+        End If
     End Sub
-
-    Private Sub SetContentDataRow(txt As String, docx As wDoc.DocumentCore, dRow As TableRow, CellWidth As Integer)
-        Dim dCell As New TableCell(docx)
-        dCell.CellFormat.Borders.SetBorders(wDoc.MultipleBorderTypes.Outside, wDoc.BorderStyle.Single, wDoc.Color.Black, 1)
-        Dim cWidth As Double = wDoc.LengthUnitConverter.Convert(CellWidth, wDoc.LengthUnit.Centimeter, wDoc.LengthUnit.Point)
-        dCell.CellFormat.PreferredWidth = New TableWidth(cWidth, TableWidthUnit.Point)
-        dRow.Cells.Add(dCell)
-
-        'Dim p As New wDoc.Paragraph(docx)
-        'p.ParagraphFormat.Alignment = HorizontalAlignment.Left
-        'p.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(1, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-        'p.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(1, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-        'p.ParagraphFormat.LineSpacing = 1
-        dCell.Content.Start.Insert(txt, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0})
-
-        'p.Content.End.Insert(txt, New wDoc.CharacterFormat() With {.FontName = "Tahoma", .FontColor = wDoc.Color.Black, .Size = 8.0})
-    End Sub
-
-    Private Sub SetTextToTableCell(txt As String, docx As wDoc.DocumentCore, cell As TableCell, txtStyle As wDoc.CharacterFormat)
-        Dim p As New wDoc.Paragraph(docx)
-        p.ParagraphFormat.Alignment = HorizontalAlignment.Left
-        p.ParagraphFormat.SpaceBefore = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-        p.ParagraphFormat.SpaceAfter = wDoc.LengthUnitConverter.Convert(3, wDoc.LengthUnit.Millimeter, wDoc.LengthUnit.Point)
-        p.Content.Start.Insert(txt, txtStyle)
-        cell.Blocks.Add(p)
-    End Sub
-
-
 
     Private Sub GenerateFileExcel(tDt As DataTable)
         Using ep As New ExcelPackage
@@ -371,18 +311,6 @@ Public Class Form1
 
         ws.Cells(hRow, 1, hRow + DT.Rows.Count, DT.Columns.Count).AutoFitColumns()
     End Sub
-    Private Function ReplaceBracket(str As String) As String
-        Dim ret As String = str
-
-        Do
-            If ret.StartsWith("(") = True And ret.EndsWith(")") = True Then
-                ret = ret.Substring(1, ret.Length - 2)
-            End If
-        Loop While ret.StartsWith("(") = True And ret.EndsWith(")") = True
-
-        Return ret
-    End Function
-
 
 #Region "Database Function"
 
@@ -548,7 +476,16 @@ Public Class Form1
 
         Return ret
     End Function
+    Private Function ReplaceBracket(str As String) As String
+        Dim ret As String = str
 
+        Do
+            If ret.StartsWith("(") = True And ret.EndsWith(")") = True Then
+                ret = ret.Substring(1, ret.Length - 2)
+            End If
+        Loop While ret.StartsWith("(") = True And ret.EndsWith(")") = True
 
+        Return ret
+    End Function
 #End Region
 End Class

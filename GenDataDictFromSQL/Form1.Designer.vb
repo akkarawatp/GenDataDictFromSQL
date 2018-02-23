@@ -23,6 +23,8 @@ Partial Class Form1
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.GroupBox3 = New System.Windows.Forms.GroupBox()
+        Me.lblProgressText = New System.Windows.Forms.Label()
+        Me.ProgressBar1 = New System.Windows.Forms.ProgressBar()
         Me.btnBrowseFile = New System.Windows.Forms.Button()
         Me.txtOutputPath = New System.Windows.Forms.TextBox()
         Me.Label10 = New System.Windows.Forms.Label()
@@ -37,13 +39,15 @@ Partial Class Form1
         Me.Label8 = New System.Windows.Forms.Label()
         Me.Label5 = New System.Windows.Forms.Label()
         Me.Label4 = New System.Windows.Forms.Label()
-        Me.ProgressBar1 = New System.Windows.Forms.ProgressBar()
-        Me.lblProgressText = New System.Windows.Forms.Label()
+        Me.rdiDocDOCX = New System.Windows.Forms.RadioButton()
+        Me.rdiDocXLSX = New System.Windows.Forms.RadioButton()
         Me.GroupBox3.SuspendLayout()
         Me.SuspendLayout()
         '
         'GroupBox3
         '
+        Me.GroupBox3.Controls.Add(Me.rdiDocXLSX)
+        Me.GroupBox3.Controls.Add(Me.rdiDocDOCX)
         Me.GroupBox3.Controls.Add(Me.lblProgressText)
         Me.GroupBox3.Controls.Add(Me.ProgressBar1)
         Me.GroupBox3.Controls.Add(Me.btnBrowseFile)
@@ -65,6 +69,22 @@ Partial Class Form1
         Me.GroupBox3.Size = New System.Drawing.Size(747, 152)
         Me.GroupBox3.TabIndex = 3
         Me.GroupBox3.TabStop = False
+        '
+        'lblProgressText
+        '
+        Me.lblProgressText.AutoSize = True
+        Me.lblProgressText.Font = New System.Drawing.Font("Microsoft Sans Serif", 8.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(222, Byte))
+        Me.lblProgressText.Location = New System.Drawing.Point(12, 108)
+        Me.lblProgressText.Name = "lblProgressText"
+        Me.lblProgressText.Size = New System.Drawing.Size(0, 13)
+        Me.lblProgressText.TabIndex = 27
+        '
+        'ProgressBar1
+        '
+        Me.ProgressBar1.Location = New System.Drawing.Point(9, 124)
+        Me.ProgressBar1.Name = "ProgressBar1"
+        Me.ProgressBar1.Size = New System.Drawing.Size(626, 23)
+        Me.ProgressBar1.TabIndex = 26
         '
         'btnBrowseFile
         '
@@ -193,21 +213,27 @@ Partial Class Form1
         Me.Label4.TabIndex = 6
         Me.Label4.Text = "Data Source"
         '
-        'ProgressBar1
+        'rdiDocDOCX
         '
-        Me.ProgressBar1.Location = New System.Drawing.Point(9, 124)
-        Me.ProgressBar1.Name = "ProgressBar1"
-        Me.ProgressBar1.Size = New System.Drawing.Size(626, 23)
-        Me.ProgressBar1.TabIndex = 26
+        Me.rdiDocDOCX.AutoSize = True
+        Me.rdiDocDOCX.Checked = True
+        Me.rdiDocDOCX.Location = New System.Drawing.Point(558, 58)
+        Me.rdiDocDOCX.Name = "rdiDocDOCX"
+        Me.rdiDocDOCX.Size = New System.Drawing.Size(55, 17)
+        Me.rdiDocDOCX.TabIndex = 28
+        Me.rdiDocDOCX.TabStop = True
+        Me.rdiDocDOCX.Text = "DOCX"
+        Me.rdiDocDOCX.UseVisualStyleBackColor = True
         '
-        'lblProgressText
+        'rdiDocXLSX
         '
-        Me.lblProgressText.AutoSize = True
-        Me.lblProgressText.Font = New System.Drawing.Font("Microsoft Sans Serif", 8.25!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(222, Byte))
-        Me.lblProgressText.Location = New System.Drawing.Point(12, 108)
-        Me.lblProgressText.Name = "lblProgressText"
-        Me.lblProgressText.Size = New System.Drawing.Size(0, 13)
-        Me.lblProgressText.TabIndex = 27
+        Me.rdiDocXLSX.AutoSize = True
+        Me.rdiDocXLSX.Location = New System.Drawing.Point(641, 59)
+        Me.rdiDocXLSX.Name = "rdiDocXLSX"
+        Me.rdiDocXLSX.Size = New System.Drawing.Size(52, 17)
+        Me.rdiDocXLSX.TabIndex = 29
+        Me.rdiDocXLSX.Text = "XLSX"
+        Me.rdiDocXLSX.UseVisualStyleBackColor = True
         '
         'Form1
         '
@@ -240,4 +266,6 @@ Partial Class Form1
     Friend WithEvents Label4 As Label
     Friend WithEvents lblProgressText As Label
     Friend WithEvents ProgressBar1 As ProgressBar
+    Friend WithEvents rdiDocXLSX As RadioButton
+    Friend WithEvents rdiDocDOCX As RadioButton
 End Class

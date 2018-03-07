@@ -151,6 +151,7 @@ Public Class Form1
                 'Table Data
                 Dim t As Table = doc.AddTable(cDt.Rows.Count + 1, 7)
                 t.Design = TableDesign.TableGrid
+
                 'HeaderRow
                 t.Rows(0).Cells(0).Paragraphs.First.Append("Column Name", fHeader)
                 t.Rows(0).Cells(1).Paragraphs.First.Append("Data Type", fHeader)
